@@ -33,6 +33,10 @@ public class ChatListActivity extends FragmentActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        System.loadLibrary("crypto");
+        System.loadLibrary("ssl");
+
         setContentView(R.layout.activity_chat_list);
 
         if (findViewById(R.id.chat_detail_container) != null) {
