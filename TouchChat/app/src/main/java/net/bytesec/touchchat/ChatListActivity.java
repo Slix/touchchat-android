@@ -34,8 +34,8 @@ public class ChatListActivity extends FragmentActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        System.loadLibrary("crypto");
-        System.loadLibrary("ssl");
+        System.loadLibrary("nativecrypt");
+        Native.helloworld();
 
         setContentView(R.layout.activity_chat_list);
 
