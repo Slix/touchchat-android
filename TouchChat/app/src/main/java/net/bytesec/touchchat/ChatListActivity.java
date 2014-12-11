@@ -35,7 +35,9 @@ public class ChatListActivity extends FragmentActivity
         super.onCreate(savedInstanceState);
 
         System.loadLibrary("nativecrypt");
-        Native.helloworld();
+        //Native.helloworld();
+        System.out.println("Printing:");
+        System.out.println(Native.generateKeypair());
 
         setContentView(R.layout.activity_chat_list);
 

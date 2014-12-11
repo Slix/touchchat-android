@@ -4,7 +4,7 @@ package net.bytesec.touchchat;
 public class Native {
     public static native void helloworld();
 
-    // Returns a public key, newline, private key.
+    // Returns a public key, pipe character, private key.
     public static native String generateKeypair();
 
     // Signs a message. Returns signature
