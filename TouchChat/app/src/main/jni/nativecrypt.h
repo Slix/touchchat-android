@@ -13,8 +13,12 @@ jstring Java_net_bytesec_touchchat_Native_signMessage(
 jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
     JNIEnv* env, jobject this, jstring message, jstring signature, jstring otherPublicKey);
 
+int verifyMessage(char *message, char *signature, char *otherPublicKey);
+
 jboolean Java_net_bytesec_touchchat_Native_verifyMassMessages(
     JNIEnv* env, jobject this, jobjectArray messages, jobjectArray signatures, jobjectArray otherPublicKeys);
+
+void* mass_worker(void *v);
 
 // Not written by me
 size_t calcDecodeLength(const char* b64input);

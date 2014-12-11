@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "nativecrypt.h"
 
@@ -91,21 +92,14 @@ jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
     JNIEnv* env, jobject this, jstring message, jstring signature, jstring otherPublicKey) {
 
     const char *pubkey = (*env)->GetStringUTFChars(env, otherPublicKey, 0);
-    BIO *bio = BIO_new_mem_buf((char*)pubkey, -1);
-    RSA *r = RSA_new();
-    PEM_read_bio_RSAPublicKey(bio, &r);
+
 
     const char *msg = (*env)->GetStringUTFChars(env, message, 0);
-    unsigned char *digest = malloc(20);
-    SHA1((const unsigned char *)msg, strlen(msg) + 1, digest);
 
     const char *sigencoded = (*env)->GetStringUTFChars(env, signature, 0);
-    unsigned char *sigdecoded;
-    size_t decoded_size;
-    Base64Decode((char*)sigencoded, (uint8_t**)&sigdecoded, &decoded_size);
 
     // Verify signatures
-    int success = RSA_verify(NID_sha1, digest, 20, sigdecoded, decoded_size, r);
+    int success = verifyMessage(msg, sigencoded, pubkey);
 
     if (success) {
         return JNI_TRUE;
@@ -114,26 +108,160 @@ jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
     }
 }
 
+int verifyMessage(char *msg, char *sigencoded, char *pubkey) {
+    BIO *bio = BIO_new_mem_buf((char*)pubkey, -1);
+    RSA *r = RSA_new();
+    PEM_read_bio_RSAPublicKey(bio, &r);
+
+    unsigned char *digest = malloc(20);
+    SHA1((const unsigned char *)msg, strlen(msg) + 1, digest);
+
+    unsigned char *sigdecoded;
+    size_t decoded_size;
+    Base64Decode((char*)sigencoded, (uint8_t**)&sigdecoded, &decoded_size);
+
+    return RSA_verify(NID_sha1, digest, 20, sigdecoded, decoded_size, r);
+}
+
+int verification_failed = 0;
+pthread_mutex_t fail_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+struct worker_data {
+    char **messages;
+    char **signatures;
+    char **otherPublicKeys;
+
+    int start;
+    int end; // exclusive
+};
+
 jboolean Java_net_bytesec_touchchat_Native_verifyMassMessages(
     JNIEnv* env, jobject this, jobjectArray messages, jobjectArray signatures, jobjectArray otherPublicKeys) {
 
-    // Temporary implementation without threading so I can start on the UI
     jint length = (*env)->GetArrayLength(env, messages);
-    jsize i = 0;
-    while (i < length) {
-        jobject message = (*env)->GetObjectArrayElement(env, messages, i);
-        jobject signature = (*env)->GetObjectArrayElement(env, signatures, i);
-        jobject otherPublicKey = (*env)->GetObjectArrayElement(env, otherPublicKeys, i);
 
-        if (Java_net_bytesec_touchchat_Native_verifyMessage(
-            env, this, (jstring)message, (jstring)signature, (jstring)otherPublicKey) == JNI_FALSE) {
-            return JNI_FALSE;
+    jint splitat = length / 2;
+
+    // Turn the arrays into c-style arrays and strings
+    char **msgarr = malloc(sizeof(char*) * length);
+    char **sigarr = malloc(sizeof(char*) * length);
+    char **keyarr = malloc(sizeof(char*) * length);
+
+    jint j = 0;
+    while (j < length) {
+        const char *buf;
+
+        jstring realstring = (jstring)(*env)->GetObjectArrayElement(env, messages, j);
+        buf = (*env)->GetStringUTFChars(env, realstring, 0);
+        msgarr[j] = malloc(strlen(buf) + 1);
+        strcpy(msgarr[j], buf);
+        (*env)->ReleaseStringUTFChars(env, realstring, buf);
+
+        realstring = (jstring)(*env)->GetObjectArrayElement(env, signatures, j);
+        buf = (*env)->GetStringUTFChars(env, realstring, 0);
+        sigarr[j] = malloc(strlen(buf) + 1);
+        strcpy(sigarr[j], buf);
+        (*env)->ReleaseStringUTFChars(env, realstring, buf);
+
+        realstring = (jstring)(*env)->GetObjectArrayElement(env, otherPublicKeys, j);
+        buf = (*env)->GetStringUTFChars(env, realstring, 0);
+        keyarr[j] = malloc(strlen(buf) + 1);
+        strcpy(keyarr[j], buf);
+        (*env)->ReleaseStringUTFChars(env, realstring, buf);
+
+        j++;
+    }
+
+    pthread_t tid[2];
+    int i = 0;
+    while (i < 2) {
+        struct worker_data *data = malloc(sizeof(struct worker_data));
+
+        data->messages = msgarr;
+        data->signatures = sigarr;
+        data->otherPublicKeys = keyarr;
+
+        data->start = i * splitat;
+        if (i == 0) {
+            data->end = splitat;
+        } else {
+            data->end = length;
+        }
+
+        pthread_create(&tid[i], NULL, mass_worker, data);
+        i++;
+    }
+
+    // Join will happen when all threads finish or verification fails.
+    i = 0;
+    while (i < 2) {
+        pthread_join(tid[i], NULL);
+        i++;
+    }
+
+    // clear all that memory for the arrays
+    j = 0;
+    while (j < length) {
+        free(msgarr[j]);
+        free(sigarr[j]);
+        free(keyarr[j]);
+        j++;
+    }
+    free(msgarr);
+    free(sigarr);
+    free(keyarr);
+
+    if (verification_failed) {
+        return JNI_FALSE;
+    } else {
+        return JNI_TRUE;
+    }
+}
+
+
+void* mass_worker(void *v) {
+    struct worker_data *d = (struct worker_data*)v;
+
+    char **messages = d->messages;
+    char **signatures = d->signatures;
+    char **otherPublicKeys = d->otherPublicKeys;
+
+    jsize start = d->start;
+    jsize end = d->end;
+
+    // Worker data not needed anymore. Easier to free here than in main thread.
+    free(d);
+
+    jsize i = start;
+    while (i < end) {
+        pthread_mutex_lock(&fail_mutex);
+        if (verification_failed) {
+            // Abort early
+            pthread_mutex_unlock(&fail_mutex);
+            return NULL;
+        }
+        pthread_mutex_unlock(&fail_mutex);
+
+        char *message = messages[i];
+        char *signature = signatures[i];
+        char *otherPublicKey = otherPublicKeys[i];
+
+        // Expensive (relatively)
+        if (!verifyMessage(message, signature, otherPublicKey)) {
+            // We reached a failure point. Inform all other threads.
+            pthread_mutex_lock(&fail_mutex);
+            verification_failed = 1;
+            pthread_mutex_unlock(&fail_mutex);
         }
 
         i++;
     }
-    return JNI_TRUE;
+
+    return NULL;
 }
+
+
+
 
 /*
  * From http://doctrina.org/Base64-With-OpenSSL-C-API.html
