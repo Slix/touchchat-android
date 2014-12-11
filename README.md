@@ -2,6 +2,8 @@
 
 **NOTE: Taking 12/10 deadline**
 
+Video demo: http://youtu.be/_SNJ6uF2daw
+
 A secure chat platform for talking with friends.
 
 Tap your phone to your friend's and use NFC to exchange information. After that, you can securely chat with your friend using encryption and be sure that only they can read your messages.
