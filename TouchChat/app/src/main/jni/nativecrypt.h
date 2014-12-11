@@ -10,10 +10,10 @@ jstring Java_net_bytesec_touchchat_Native_generateKeypair(JNIEnv* env);
 jstring Java_net_bytesec_touchchat_Native_signMessage(
     JNIEnv* env, jobject this, jstring message, jstring yourPrivateKey);
 
-jstring Java_net_bytesec_touchchat_Native_verifyMessage(
-    JNIEnv* env, jobject this, jstring signedmessage, jstring otherPublicKey);
+jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
+    JNIEnv* env, jobject this, jstring message, jstring signature, jstring otherPublicKey);
 
-jstring Java_net_bytesec_touchchat_Native_verifyMassMessages(
+jboolean Java_net_bytesec_touchchat_Native_verifyMassMessages(
     JNIEnv* env, jobject this, jobjectArray messages, jobjectArray otherPublicKeys);
 
 // Not written by me

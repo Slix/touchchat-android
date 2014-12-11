@@ -87,11 +87,34 @@ jstring Java_net_bytesec_touchchat_Native_signMessage(
     return (*env)->NewStringUTF(env, encoded);
 }
 
-jstring Java_net_bytesec_touchchat_Native_verifyMessage(
-    JNIEnv* env, jobject this, jstring signedmessage, jstring otherPublicKey) {
+jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
+    JNIEnv* env, jobject this, jstring message, jstring signature, jstring otherPublicKey) {
+
+    const char *pubkey = (*env)->GetStringUTFChars(env, otherPublicKey, 0);
+    BIO *bio = BIO_new_mem_buf((char*)pubkey, -1);
+    RSA *r = RSA_new();
+    PEM_read_bio_RSAPublicKey(bio, &r);
+
+    const char *msg = (*env)->GetStringUTFChars(env, message, 0);
+    unsigned char *digest = malloc(20);
+    SHA1((const unsigned char *)msg, strlen(msg) + 1, digest);
+
+    const char *sigencoded = (*env)->GetStringUTFChars(env, signature, 0);
+    unsigned char *sigdecoded;
+    size_t decoded_size;
+    Base64Decode((char*)sigencoded, (uint8_t**)&sigdecoded, &decoded_size);
+
+    // Verify signatures
+    int success = RSA_verify(NID_sha1, digest, 20, sigdecoded, decoded_size, r);
+
+    if (success) {
+        return JNI_TRUE;
+    } else {
+        return JNI_FALSE;
+    }
 }
 
-jstring Java_net_bytesec_touchchat_Native_verifyMassMessages(
+jboolean Java_net_bytesec_touchchat_Native_verifyMassMessages(
     JNIEnv* env, jobject this, jobjectArray messages, jobjectArray otherPublicKeys) {
 }
 

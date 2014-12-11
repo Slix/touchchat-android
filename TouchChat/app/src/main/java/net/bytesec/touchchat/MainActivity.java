@@ -39,7 +39,9 @@ public class MainActivity extends ActionBarActivity {
             privkey = sharedPref.getString("privkey", "");
         }
 
-        System.out.println("Test: " + Native.signMessage("hello", privkey));
+        String sig = Native.signMessage("hello", privkey);
+        sig = sig.replace("T", "t");
+        System.out.println("Test: " + Native.verifyMessage("hello", sig, pubkey));
 
 
     }
