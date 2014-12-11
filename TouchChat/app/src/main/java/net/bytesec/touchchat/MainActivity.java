@@ -4,9 +4,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -18,6 +20,9 @@ import com.firebase.client.FirebaseError;
 import com.firebase.client.Query;
 import com.firebase.client.ValueEventListener;
 
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,11 +37,15 @@ public class MainActivity extends ActionBarActivity {
     String privkey;
 
     EditText chatBox;
-    ListView messageList;
+    ListView messageListView;
 
     Firebase firebase;
 
     List<String> seenKeys;
+
+    // For ListView
+    ArrayList<String> messageList = new ArrayList<String>();
+    ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +58,7 @@ public class MainActivity extends ActionBarActivity {
         System.loadLibrary("nativecrypt");
 
         chatBox = (EditText)findViewById(R.id.chatBox);
-        messageList = (ListView)findViewById(R.id.messageList);
+        messageListView = (ListView)findViewById(R.id.messageList);
 
         chatBox.setOnEditorActionListener(new ChatBoxListener());
 
@@ -72,6 +81,12 @@ public class MainActivity extends ActionBarActivity {
 
         // Do mass verification first to demonstrate C's parallelism
         processMassMessage();
+
+        // ListView
+        adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1,
+                messageList);
+        messageListView.setAdapter(adapter);
     }
 
 
@@ -115,6 +130,19 @@ public class MainActivity extends ActionBarActivity {
     // Call AFTER verifying signature
     public void processMessage(String message, String pubkey) {
         System.out.println(message);
+
+        // Convert the pubkey into something easy to read.
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            return;
+        }
+        String fingerprint = Base64.encodeToString(md.digest(pubkey.getBytes()), Base64.NO_WRAP);
+
+        // Easy way instead of bothering with Android UI
+        messageList.add(message + "\nSent by: " + fingerprint);
+        adapter.notifyDataSetChanged();
 
     }
 
