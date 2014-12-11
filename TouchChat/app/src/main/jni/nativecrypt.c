@@ -115,7 +115,24 @@ jboolean Java_net_bytesec_touchchat_Native_verifyMessage(
 }
 
 jboolean Java_net_bytesec_touchchat_Native_verifyMassMessages(
-    JNIEnv* env, jobject this, jobjectArray messages, jobjectArray otherPublicKeys) {
+    JNIEnv* env, jobject this, jobjectArray messages, jobjectArray signatures, jobjectArray otherPublicKeys) {
+
+    // Temporary implementation without threading so I can start on the UI
+    jint length = (*env)->GetArrayLength(env, messages);
+    jsize i = 0;
+    while (i < length) {
+        jobject message = (*env)->GetObjectArrayElement(env, messages, i);
+        jobject signature = (*env)->GetObjectArrayElement(env, signatures, i);
+        jobject otherPublicKey = (*env)->GetObjectArrayElement(env, otherPublicKeys, i);
+
+        if (Java_net_bytesec_touchchat_Native_verifyMessage(
+            env, this, (jstring)message, (jstring)signature, (jstring)otherPublicKey) == JNI_FALSE) {
+            return JNI_FALSE;
+        }
+
+        i++;
+    }
+    return JNI_TRUE;
 }
 
 /*

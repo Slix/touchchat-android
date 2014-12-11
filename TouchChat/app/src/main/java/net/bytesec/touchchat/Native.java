@@ -15,5 +15,5 @@ public class Native {
 
     // Verifies a mass number of messages in parallel
     // Returns whether all messages are valid. (If false, then you are under attack.)
-    public static native boolean verifyMassMessages(String[] messages, String[] otherPublicKeys);
+    public static native boolean verifyMassMessages(String[] messages, String[] signatures, String[] otherPublicKeys);
 }

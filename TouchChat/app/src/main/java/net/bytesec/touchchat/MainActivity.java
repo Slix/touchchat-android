@@ -40,8 +40,11 @@ public class MainActivity extends ActionBarActivity {
         }
 
         String sig = Native.signMessage("hello", privkey);
-        sig = sig.replace("T", "t");
-        System.out.println("Test: " + Native.verifyMessage("hello", sig, pubkey));
+        String sig2 = sig.replace("T", "t");
+        String[] msgs = {"hello", "hello"};
+        String[] sigs = {sig, sig};
+        String[] pubkeys = {pubkey, pubkey};
+        System.out.println("Test: " + Native.verifyMassMessages(msgs, sigs, pubkeys));
 
 
     }
