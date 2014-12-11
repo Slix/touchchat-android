@@ -1,5 +1,7 @@
 package net.bytesec.touchchat;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -8,13 +10,36 @@ import android.view.MenuItem;
 
 public class MainActivity extends ActionBarActivity {
 
+    SharedPreferences sharedPref;
+
+    String pubkey;
+    String privkey;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         System.loadLibrary("nativecrypt");
-        System.out.println(Native.generateKeypair());
+
+        sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+
+        if (!sharedPref.contains("pubkey")) {
+            String[] keypair = Native.generateKeypair().split("\\|");
+            // Separate
+            pubkey = keypair[0];
+            privkey = keypair[1];
+
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString("pubkey", pubkey);
+            editor.putString("privkey", privkey);
+            editor.commit();
+        } else {
+            pubkey = sharedPref.getString("pubkey", "");
+            privkey = sharedPref.getString("privkey", "");
+        }
+
+
     }
 
 
