@@ -139,6 +139,8 @@ public class MainActivity extends ActionBarActivity {
             return;
         }
         String fingerprint = Base64.encodeToString(md.digest(pubkey.getBytes()), Base64.NO_WRAP);
+        // Shorten for readability
+        fingerprint = fingerprint.substring(0, 10);
 
         // Easy way instead of bothering with Android UI
         messageList.add(message + "\nSent by: " + fingerprint);
