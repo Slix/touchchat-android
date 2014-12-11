@@ -12,6 +12,8 @@ android {
         versionName "1.0"
         ndk {
             moduleName "nativecrypt"
+            abiFilter "armeabi"
+            ldLibs "log app/src/main/jniLibs/armeabi/libcrypto.so app/src/main/jniLibs/armeabi/libssl.so"
         }
     }
 
