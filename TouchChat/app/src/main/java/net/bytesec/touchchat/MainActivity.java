@@ -4,8 +4,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.TextView;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -15,12 +19,20 @@ public class MainActivity extends ActionBarActivity {
     String pubkey;
     String privkey;
 
+    EditText chatBox;
+    ListView messageList;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         System.loadLibrary("nativecrypt");
+
+        chatBox = (EditText)findViewById(R.id.chatBox);
+        messageList = (ListView)findViewById(R.id.messageList);
+
+        chatBox.setOnEditorActionListener(new ChatBoxListener());
 
         sharedPref = this.getPreferences(Context.MODE_PRIVATE);
 
@@ -61,5 +73,25 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void sendMessage(String message) {
+        String signature = Native.signMessage(message, privkey);
+
+        System.out.println(message);
+        System.out.println(signature);
+        System.out.println(pubkey);
+    }
+
+    public class ChatBoxListener implements TextView.OnEditorActionListener {
+        @Override
+        public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+            String message = chatBox.getText().toString();
+            chatBox.setText("");
+
+            sendMessage(message);
+
+            return true;
+        }
     }
 }
