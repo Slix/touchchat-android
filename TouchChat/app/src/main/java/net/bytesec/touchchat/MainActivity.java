@@ -39,6 +39,8 @@ public class MainActivity extends ActionBarActivity {
             privkey = sharedPref.getString("privkey", "");
         }
 
+        System.out.println("Test: " + Native.signMessage("hello", privkey));
+
 
     }
 
