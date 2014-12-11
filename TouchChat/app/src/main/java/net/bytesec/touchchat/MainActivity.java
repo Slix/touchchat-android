@@ -38,15 +38,6 @@ public class MainActivity extends ActionBarActivity {
             pubkey = sharedPref.getString("pubkey", "");
             privkey = sharedPref.getString("privkey", "");
         }
-
-        String sig = Native.signMessage("hello", privkey);
-        String sig2 = sig.replace("T", "t");
-        String[] msgs = {"hello", "hello"};
-        String[] sigs = {sig, sig};
-        String[] pubkeys = {pubkey, pubkey};
-        System.out.println("Test: " + Native.verifyMassMessages(msgs, sigs, pubkeys));
-
-
     }
 
 
